@@ -31,11 +31,78 @@ public class BingTest {
 		//System.out.println(content);
 		return content;
 	}
-	/*
+	
 	public static ArrayList<ArrayList<String>> parseJSON(String jsonStr) {
+		ArrayList<ArrayList<String>> result = new ArrayList<ArrayList<String>>();
+		for(int i=0; i<10; i++){
+            
+            result.add(new ArrayList<String>());
+		}
+		// find title
+		JSONParser parser = new JSONParser();
+		KeyFinder finder = new KeyFinder();
+		finder.setMatchKey("Title");
+		try{
+			int count = 0;
+		    while(!finder.isEnd()){
+                parser.parse(jsonStr, finder, true);
+                if(finder.isFound()){
+                    finder.setFound(false);
+                    String s = finder.getValue().toString();
+                    result.get(count).add(s);
+                    count++;
+                    
+                }
+		    }
+        }
+	    catch(ParseException pe){
+		    pe.printStackTrace();
+        }
+		// find Description
+		JSONParser parser2 = new JSONParser();
+		KeyFinder finder2 = new KeyFinder();
+		finder2.setMatchKey("Description");
+		try{
+		    int count = 0;
+		    while(!finder2.isEnd()){
+                parser2.parse(jsonStr, finder2, true);
+                if(finder2.isFound()){
+                    finder2.setFound(false);
+                    String s = finder.getValue().toString();
+                    result.get(count).add(s);
+                    count++;
+                    
+                }
+		    }
+        }
+	    catch(ParseException pe){
+		    pe.printStackTrace();
+        }
 		
+		// find DisplayURl
+		JSONParser parser3 = new JSONParser();
+		KeyFinder finder3 = new KeyFinder();
+		finder3.setMatchKey("DisplayUrl");
+		try{
+			int count = 0;
+		    while(!finder3.isEnd()){
+                parser3.parse(jsonStr, finder3, true);
+                if(finder3.isFound()){
+                    finder3.setFound(false);
+                    String s = finder3.getValue().toString();
+                    result.get(count).add(s);
+                    count++;
+                    
+                }
+		    }           
+        }
+	    catch(ParseException pe){
+		    pe.printStackTrace();
+        }
+		
+        return result;
 	}
-	*/
+	
 	
 	public static void main(String[] args) throws IOException {
 		/*
