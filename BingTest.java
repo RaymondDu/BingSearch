@@ -1,17 +1,12 @@
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
-import org.json.simple.*;
-import org.json.simple.parser.ContainerFactory;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
-
 
 import org.apache.commons.codec.binary.Base64;
 public class BingTest {
@@ -152,6 +147,10 @@ public class BingTest {
     }
     
 	public static void main(String[] args) throws IOException {
+            if (args.length<2){
+                System.out.println("Usage: make run keyword=<keyword> precision=<precision>");
+                System.exit(1);
+            }
             ArrayList<String> keywords = new ArrayList<String>();
             keywords.add(args[0]);
             Float targetPrecision = 0.9f;
