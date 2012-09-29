@@ -1,12 +1,14 @@
-package BeingAPI;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
-import org.json.simple.*;
+//import org.json.simple.*;
+import java.util.ArrayList;
 
 import org.apache.commons.codec.binary.Base64;
 public class BingTest {
@@ -103,41 +105,68 @@ public class BingTest {
         return result;
 	}
 	
-	
-	public static void main(String[] args) throws IOException {
-		/*
-		File newTextFile = new File("test.xml");
-        FileWriter fileWriter = new FileWriter(newTextFile);
-        fileWriter.write(content);
-        fileWriter.close();
-        */
-		System.out.println("=======decode=======");
-        
-		  String s="[0,{\"1\":{\"2\":{\"3\":{\"4\":[5,{\"6\":7}]}}}}]";
-		  Object obj=JSONValue.parse(s);
-		  JSONArray array=(JSONArray)obj;
-		  System.out.println("======the 2nd element of array======");
-		  System.out.println(array.get(1));
-		  System.out.println();
-		                
-		  JSONObject obj2=(JSONObject)array.get(1);
-		  System.out.println("======field \"1\"==========");
-		  System.out.println(obj2.get("1"));    
+    public static void Query(ArrayList<ArrayList<String>> result) {
+        for (int i = 0; i < 10; i++){
+            System.out.println("Result "+(i+1));
+            System.out.println("[");
+            System.out.println("URL: "+result.get(i).get(2));
+            System.out.println("Title: "+result.get(i).get(0));
+            System.out.println("Summary: "+result.get(i).get(1));
+            System.out.println("[");
+            System.out.println();
+            System.out.print("Relevant (Y/N)?");
+            BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+            try {
+            String s = in.readLine();
+            while (!s.equals("y") && !s.equals("Y") && !s.equals("n") && !s.equals("N")) {
+                System.out.print("Please say Y/N:");
 
-		                
-		  s="{}";
-		  obj=JSONValue.parse(s);
-		  System.out.println(obj);
-		                
-		  s="[5,]";
-		  obj=JSONValue.parse(s);
-		  System.out.println(obj);
-		                
-		  s="[5,,2]";
-		  obj=JSONValue.parse(s);
-		  System.out.println(obj);
-        
-        
+                s = in.readLine();
+            }
+            if (s.equals("y") || s.equals("Y")) {
+                result.get(i).add("1");
+            } else {
+                result.get(i).add("0");
+            }
+            } catch (IOException e){
+                System.err.println(e.getMessage());
+                System.exit(1);
+            }
+        }
+    }
+    
+    
+    public static void test_query(){
+        ArrayList<ArrayList<String>> result = new  ArrayList<ArrayList<String>>(10);
+        for (int i = 0 ; i < 10 ; i++){
+            ArrayList<String> a = new ArrayList<String>(4);
+            for (int j = 0; j < 3; j++){
+                a.add("lalala");
+            }
+            result.add(a);
+        }
+        Query(result);
+    }
+    
+	public static void main(String[] args) throws IOException {
+            ArrayList<String> keywords = new ArrayList<String>();
+            keywords.add(args[0]);
+            Float targetPrecision = 0.9f;
+            try {
+                targetPrecision = Float.parseFloat(args[1]);
+            } catch (NumberFormatException e){
+                System.err.println(e.getMessage());
+                System.exit(1);
+            }
+            Float precision = 0f;
+            while (precision < targetPrecision) {
+                String content = getResult(/*keywords*/);
+                ArrayList<ArrayList<String>> result = parseJSON(content);
+                Query(result);
+                //AddNewKeyword(result, keywords);
+            }
+            
+            
 	}
 
 }
