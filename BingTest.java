@@ -5,31 +5,50 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import org.json.simple.*;
+import org.json.simple.parser.ContainerFactory;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import org.apache.commons.codec.binary.Base64;
 public class BingTest {
-	public static String getResult() throws IOException {
-		String bingUrl = "https://api.datamarket.azure.com/Data.ashx/Bing/SearchWeb/v1/Web?Query=%27gates%27&$top=10&$format=Json";
-		//Provide your account key here. 
+	public static String getResult(String q) throws IOException {
+		
+		String bingUrl = "https://api.datamarket.azure.com/Data.ashx/Bing/SearchWeb/v1/Web?Query=%27"+q+"%27&$top=10&$format=Json";
+		//Provide your account key here.
 		String accountKey = "wRccq1TMy476bqFdC1GrKeHeJ33Fm+hmzSwYWgmtSrM=";
 		
 		byte[] accountKeyBytes = Base64.encodeBase64((accountKey + ":" + accountKey).getBytes());
 		String accountKeyEnc = new String(accountKeyBytes);
-
+        
 		URL url = new URL(bingUrl);
 		URLConnection urlConnection = url.openConnection();
 		urlConnection.setRequestProperty("Authorization", "Basic " + accountKeyEnc);
-				
-		InputStream inputStream = (InputStream) urlConnection.getContent();		
+        
+		InputStream inputStream = (InputStream) urlConnection.getContent();
 		byte[] contentRaw = new byte[urlConnection.getContentLength()];
 		inputStream.read(contentRaw);
 		String content = new String(contentRaw);
-
+        
 		//The content string is the xml/json output from Bing.
 		//System.out.println(content);
 		return content;
+	}
+
+	public static HashMap<String, Integer> wordCount(String str) {
+		HashMap<String, Integer> tfMap = new HashMap<String, Integer>();
+		String[] words = str.split(" ");
+		for (String word : words) {
+			if(!tfMap.containsKey(word)) {
+				tfMap.put(word, 1);
+			} else {
+				tfMap.put(word, tfMap.get(word)+1);
+			}
+		}
+		return tfMap;
+		
 	}
 	
 	public static ArrayList<ArrayList<String>> parseJSON(String jsonStr) {
@@ -58,6 +77,7 @@ public class BingTest {
 	    catch(ParseException pe){
 		    pe.printStackTrace();
         }
+        
 		// find Description
 		JSONParser parser2 = new JSONParser();
 		KeyFinder finder2 = new KeyFinder();
@@ -68,7 +88,7 @@ public class BingTest {
                 parser2.parse(jsonStr, finder2, true);
                 if(finder2.isFound()){
                     finder2.setFound(false);
-                    String s = finder.getValue().toString();
+                    String s = finder2.getValue().toString();
                     result.get(count).add(s);
                     count++;
                     
@@ -78,7 +98,7 @@ public class BingTest {
 	    catch(ParseException pe){
 		    pe.printStackTrace();
         }
-		
+        
 		// find DisplayURl
 		JSONParser parser3 = new JSONParser();
 		KeyFinder finder3 = new KeyFinder();
@@ -151,8 +171,37 @@ public class BingTest {
                 System.out.println("Usage: make run keyword=<keyword> precision=<precision>");
                 System.exit(1);
             }
-            ArrayList<String> keywords = new ArrayList<String>();
-            keywords.add(args[0]);
+        /*
+        System.out.println("Please input query:");
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		String query = null;
+		try {
+			query = br.readLine();
+			
+		} catch (IOException ioe) {
+			System.out.println("IO error trying to read your Query!");
+			System.exit(1);
+		}
+        
+        
+        String jsonText = getResult(query);
+        ArrayList<ArrayList<String>> result = parseJSON(jsonText);
+        
+        Iterator<ArrayList<String>> iter = result.iterator();
+        int i=0;
+        while(iter.hasNext()) {
+            i++;
+            String str = iter.next().get(1);
+            System.out.println("Description"+i+" : "+str);
+            HashMap<String, Integer> map = wordCount(str);
+            for(String key : map.keySet()) {
+                System.out.println(key+"----->>"+map.get(key));
+            }
+        }
+        
+        */
+            StringBuilder keywords = new StringBuilder();
+            keywords.append(args[0]);
             Float targetPrecision = 0.9f;
             try {
                 targetPrecision = Float.parseFloat(args[1]);
@@ -162,7 +211,7 @@ public class BingTest {
             }
             Float precision = 0f;
             while (precision < targetPrecision) {
-                String content = getResult(/*keywords*/);
+                String content = getResult(keywords.toString());
                 ArrayList<ArrayList<String>> result = parseJSON(content);
                 Query(result);
                 //AddNewKeyword(result, keywords);
