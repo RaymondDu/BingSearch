@@ -1,4 +1,3 @@
-package BeingAPI;
 
 import java.io.IOException;
 
