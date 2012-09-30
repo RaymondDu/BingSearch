@@ -35,17 +35,19 @@ public class BingTest {
 		inputStream.read(contentRaw);
 		String content = new String(contentRaw);
         
-		//The content string is the xml/json output from Bing.
-		//System.out.println(content);
 		return content;
 	}
-
+    
 	public static HashMap<String, Integer> wordCount(String str) {
 		// split string, remove some punctations
-		String pattern = "([\\|.,\"()'])";
+		String pattern = "([\\:|.,\"()'])";
 	    str = str.replaceAll(pattern, "");
+        /* might be problematic */
+        str = str.toLowerCase();
+        
 	    String[] splitString = (str.split("\\s+"));
 	    
+        
 		HashMap<String, Integer> tfMap = new HashMap<String, Integer>();
 		
 		for (String word : splitString) {
@@ -59,11 +61,13 @@ public class BingTest {
 	}
 	
 	public static ArrayList<ArrayList<String>> parseJSON(String jsonStr) {
+        
 		ArrayList<ArrayList<String>> result = new ArrayList<ArrayList<String>>();
 		for(int i=0; i<10; i++){
             
             result.add(new ArrayList<String>());
 		}
+        
 		// find title
 		JSONParser parser = new JSONParser();
 		KeyFinder finder = new KeyFinder();
@@ -80,6 +84,12 @@ public class BingTest {
                     
                 }
 		    }
+            
+            if(count < 10) {
+                System.out.println("Number of retrieved results by Bing is less than 10 !");
+                System.exit(0);
+                
+            }
         }
 	    catch(ParseException pe){
 		    pe.printStackTrace();
@@ -121,7 +131,7 @@ public class BingTest {
                     count++;
                     
                 }
-		    }           
+		    }
         }
 	    catch(ParseException pe){
 		    pe.printStackTrace();
@@ -130,31 +140,34 @@ public class BingTest {
         return result;
 	}
 	
+    /* return the number of articles that are relevant */
     public static int Query(ArrayList<ArrayList<String>> result) {
-        int y=0; 
+        int y=0;
         for (int i = 0; i < 10; i++){
             System.out.println("Result "+(i+1));
             System.out.println("[");
             System.out.println("URL: "+result.get(i).get(2));
             System.out.println("Title: "+result.get(i).get(0));
             System.out.println("Summary: "+result.get(i).get(1));
-            System.out.println("[");
+            System.out.println("]");
             System.out.println();
             System.out.print("Relevant (Y/N)?");
             BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
             try {
-            String s = in.readLine();
-            while (!s.equals("y") && !s.equals("Y") && !s.equals("n") && !s.equals("N")) {
-                System.out.print("Please say Y/N:");
-
-                s = in.readLine();
-            }
-            if (s.equals("y") || s.equals("Y")) {
-                result.get(i).add("1");
-                y++;
-            } else {
-                result.get(i).add("0");
-            }
+                String s = in.readLine();
+                while (!s.equals("y") && !s.equals("Y") && !s.equals("n") && !s.equals("N")) {
+                    System.out.print("Please say Y/N:");
+                    
+                    s = in.readLine();
+                }
+                if (s.equals("y") || s.equals("Y")) {
+                    result.get(i).add("1");
+                    y++;
+                } else {
+                    result.get(i).add("0");
+                }
+                System.out.println("Precision: "+y+"/10");
+                System.out.println("-----------------------------------------");
             } catch (IOException e){
                 System.err.println(e.getMessage());
                 System.exit(1);
@@ -163,27 +176,111 @@ public class BingTest {
         return y;
     }
     
+   
     
-    public static void test_query(){
-        ArrayList<ArrayList<String>> result = new  ArrayList<ArrayList<String>>(10);
-        for (int i = 0 ; i < 10 ; i++){
-            ArrayList<String> a = new ArrayList<String>(4);
-            for (int j = 0; j < 3; j++){
-                a.add("lalala");
-            }
-            result.add(a);
+    
+    public static void AddNewKeyword(ArrayList<ArrayList<String>> result,ArrayList<String> keywords){
+        ArrayList<HashMap<String,Integer>> wordcounts = new ArrayList<HashMap<String,Integer>>();
+        HashMap<String,Double> globalWeights = new HashMap<String,Double>();
+        HashMap<String,Double> idf = new HashMap<String,Double>();
+        // merge title and description together
+        for (int i = 0; i < 10; i++){
+            wordcounts.add(wordCount(result.get(i).get(0)+result.get(i).get(1)));
         }
-        Query(result);
+        
+        for (int i = 0; i < 10; i++){
+            if (result.get(i).get(3).equals("1")){
+                calculateWeights(wordcounts, i, globalWeights, idf);
+            }
+        }
+        double firstWeight=0;
+        String firstKey=null;
+        double secondWeight=0;
+        String secondKey=null;
+        /* might be problematic */
+        
+        for (String s : keywords) {
+            if(globalWeights.containsKey(s.toLowerCase())) {
+                globalWeights.remove(s.toLowerCase());
+            }
+        }
+        
+        
+        
+        for(String key : globalWeights.keySet()){
+            if (globalWeights.get(key)>firstWeight){
+                secondWeight = firstWeight;
+                secondKey = firstKey;
+                firstWeight =globalWeights.get(key);
+                firstKey = key;
+            } else if (globalWeights.get(key)>secondWeight){
+                secondWeight = globalWeights.get(key);
+                secondKey = key;
+            }
+        }
+        
+        // add expansion keywords to the query
+        keywords.add(firstKey);
+        keywords.add(secondKey);
+        
+        System.out.println("=================================");
+        System.out.println("Augmented Query Keywords: "+firstKey+" "+secondKey);
+        
+        
     }
     
+    public static void calculateWeights(ArrayList<HashMap<String,Integer>> wordcounts,
+                                        int i, HashMap<String,Double> globalWeights, HashMap<String,Double> idfTable){
+        for(String key : wordcounts.get(i).keySet()) {
+            int value = wordcounts.get(i).get(key);
+            double tf = 1 + Math.log(value);
+            double idf;
+            if (idfTable.containsKey(key)){
+                idf = idfTable.get(key);
+            } else {
+                idf = Math.log(10f/occurence(key,wordcounts));
+                idfTable.put(key, idf);
+            }
+            double weight = tf * idf;
+            if (globalWeights.containsKey(key)){
+                globalWeights.put(key, globalWeights.get(key)+weight);
+            } else {
+                globalWeights.put(key, weight);
+            }
+        }
+    }
+    
+    public static int occurence(String key, ArrayList<HashMap<String,Integer>> wordcounts){
+        int retval = 0;
+        for (int i = 0; i<10; i++){
+            if (wordcounts.get(i).containsKey(key)){
+                retval++;
+            }
+        }
+        return retval;
+    }
+    
+    public static String KeywordsToString(ArrayList<String> keywords){
+        StringBuilder key = new StringBuilder();
+        key.append(keywords.get(0));
+        
+        for (int i = 1; i < keywords.size(); i++){
+            key.append(" "+keywords.get(i));
+        }
+        
+        return key.toString();
+    }
+
+    
+/* main thread */
+    
 	public static void main(String[] args) throws IOException {
-            /*if (args.length<2){
-                System.out.println("Usage: make run keyword=<keyword> precision=<precision>");
-                System.exit(1);
-            }*/
-            ArrayList<String> keywords = new ArrayList<String>();
-            /*keywords.add(args[0]);*/
+        
+        ArrayList<String> keywords = new ArrayList<String>();
+        
         float targetPrecision = 0f;
+        float precision = 0f;
+        
         System.out.println("Please input query:");
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		String query = null;
@@ -194,8 +291,14 @@ public class BingTest {
 			System.out.println("IO error trying to read your Query!");
 			System.exit(1);
 		}
-        keywords.add(query);
-        System.out.println("Please input precision:");
+        
+        
+	    String[] splitQuery = (query.split("\\s+"));
+        for(String q : splitQuery) {
+            keywords.add(q);
+        }
+    
+        System.out.println("Please input your desired precision:");
 		BufferedReader br2 = new BufferedReader(new InputStreamReader(System.in));
 		String precisionString = null;
 		try {
@@ -205,139 +308,42 @@ public class BingTest {
 			System.out.println("IO error trying to read your precision!");
 			System.exit(1);
 		}
-                try {
-                targetPrecision = Float.parseFloat(precisionString);
-            } catch (NumberFormatException e){
-                System.err.println(e.getMessage());
-                System.exit(1);
-            }
-                
-        /*String jsonText = getResult(query);
-        ArrayList<ArrayList<String>> result = parseJSON(jsonText);
         
-        Iterator<ArrayList<String>> iter = result.iterator();
-        int i=0;
-        while(iter.hasNext()) {
-            i++;
-            String str = iter.next().get(1);
-            System.out.println("Description"+i+" : "+str);
-            HashMap<String, Integer> map = wordCount(str);
-            for(String key : map.keySet()) {
-                System.out.println(key+"----->>"+map.get(key));
-            }
+        try {
+            targetPrecision = Float.parseFloat(precisionString);
+            
+        } catch (NumberFormatException e){
+            System.err.println(e.getMessage());
+            System.exit(1);
         }
         
-        */
+        
+        
+        
+        while (precision < targetPrecision) {
+            String key = KeywordsToString(keywords);
             
-            /*Float targetPrecision = 0.9f;
-            try {
-                targetPrecision = Float.parseFloat(args[1]);
-            } catch (NumberFormatException e){
-                System.err.println(e.getMessage());
-                System.exit(1);
-            }*/
+            System.out.println("Query: "+key);
+            key = java.net.URLEncoder.encode(key, "utf8");
+            System.out.println("=================================");
             
             
-            
-            Float precision = 0f;
-            while (precision < targetPrecision) {
-                String key = keyToString(keywords);
-                System.out.println("=================================");
-key = java.net.URLEncoder.encode(key, "utf8");
-                System.out.println("Keywords: "+key);
-                System.out.println("=================================");
-                
-                
-                String content = getResult(key);
-                ArrayList<ArrayList<String>> result = parseJSON(content);
-                int y = Query(result);
-                if (y == 0){
-                    System.out.println("No relevant result, cannot proceed.");
-                    System.exit(0);
-                } else {
-                    precision = y/10f;
-                }
-                AddNewKeyword(result, keywords);
+            String content = getResult(key);
+            ArrayList<ArrayList<String>> result = parseJSON(content);
+            int y = Query(result);
+            if (y == 0){
+                System.out.println("No relevant results, cannot proceed.");
+                System.exit(0);
+            } else {
+                precision = y/10f;
             }
-            System.out.println("Target precision reached, exit.");
-
             
+            if(precision < targetPrecision) AddNewKeyword(result, keywords);
+        }
+        System.out.println("Target precision reached, exit.");
+        
+        
 	}
+    
         
-        public static void AddNewKeyword(ArrayList<ArrayList<String>> result,ArrayList<String> keywords){
-            ArrayList<HashMap<String,Integer>> wordcounts = new ArrayList<HashMap<String,Integer>>();
-            HashMap<String,Double> globalWeights = new HashMap<String,Double>();
-            HashMap<String,Double> idf = new HashMap<String,Double>();
-            for (int i = 0; i < 10; i++){
-                wordcounts.add(wordCount(result.get(i).get(0)+result.get(i).get(1)));
-            }
-            
-            for (int i = 0; i < 10; i++){
-                if (result.get(i).get(3).equals("1")){
-                    calculateWeights(wordcounts, i, globalWeights, idf);
-                }
-            }
-            double firstWeight=0;
-            String firstKey=null;
-            double secondWeight=0;
-            String secondKey=null;
-            for(String key : globalWeights.keySet()){
-                if (globalWeights.get(key)>firstWeight){
-                    secondWeight = firstWeight;
-                    secondKey = firstKey;
-                    firstWeight =globalWeights.get(key);
-                    firstKey = key;              
-                } else if (globalWeights.get(key)>secondWeight){
-                    secondWeight = globalWeights.get(key);
-                    secondKey = key;
-                }
-            }
-            keywords.add(firstKey);
-            keywords.add(secondKey);
-
-            
-            System.out.println(globalWeights.toString());
-            //add new keys to keywords
-        }
-        
-        public static void calculateWeights(ArrayList<HashMap<String,Integer>> wordcounts,
-                int i, HashMap<String,Double> globalWeights, HashMap<String,Double> idfTable){
-            for(String key : wordcounts.get(i).keySet()) {
-                int value = wordcounts.get(i).get(key);
-                double tf = 1 + Math.log(value);
-                double idf;
-                if (idfTable.containsKey(key)){
-                    idf = idfTable.get(key);
-                } else {
-                    idf = Math.log(10f/occurence(key,wordcounts));
-                    idfTable.put(key, idf);
-                }
-                double weight = tf * idf;
-                if (globalWeights.containsKey(key)){
-                    globalWeights.put(key, globalWeights.get(key)+weight);
-                } else {
-                    globalWeights.put(key, weight);
-                }
-            }
-        }
-        
-        public static int occurence(String key, ArrayList<HashMap<String,Integer>> wordcounts){
-            int retval = 0;
-            for (int i = 0; i<10; i++){
-                if (wordcounts.get(i).containsKey(key)){
-                    retval++;
-                }
-            }
-            return retval;
-        }
-        
-        public static String keyToString(ArrayList<String> keywords){
-            StringBuilder key = new StringBuilder();
-            key.append(keywords.get(0));
-            for (int i = 1; i < keywords.size(); i++){
-                key.append(" "+keywords.get(i));
-            }
-            return key.toString();
-        }
-
 }
