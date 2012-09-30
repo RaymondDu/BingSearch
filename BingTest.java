@@ -38,9 +38,14 @@ public class BingTest {
 	}
 
 	public static HashMap<String, Integer> wordCount(String str) {
+		// split string, remove some punctations
+		String pattern = "([\\|.,()'])";
+	    str = str.replaceAll(pattern, "");
+	    String[] splitString = (str.split("\\s+"));
+	    
 		HashMap<String, Integer> tfMap = new HashMap<String, Integer>();
-		String[] words = str.split(" ");
-		for (String word : words) {
+		
+		for (String word : splitString) {
 			if(!tfMap.containsKey(word)) {
 				tfMap.put(word, 1);
 			} else {
@@ -48,7 +53,6 @@ public class BingTest {
 			}
 		}
 		return tfMap;
-		
 	}
 	
 	public static ArrayList<ArrayList<String>> parseJSON(String jsonStr) {
