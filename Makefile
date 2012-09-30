@@ -1,11 +1,12 @@
-JFLAGS = -cp commons-codec-1.7.jar
+JFLAGS = -cp "commons-codec-1.7.jar:json-simple-1.1.1.jar"
 JC = javac
 .SUFFIXES: .java .class
 .java.class:
-	$(JC) $(JFLAGS) $*.java
+	$(JC) $(JFLAGS) BingTest.java KeyFinder.java
 
 CLASSES = \
-        BingTest.java
+        BingTest.java \
+	KeyFinder.java
 
 default: classes
 
@@ -15,4 +16,4 @@ clean:
 	$(RM) *.class
 
 run:
-	java -cp "commons-codec-1.7.jar:." BingTest
+	java -cp "json-simple-1.1.1.jar:commons-codec-1.7.jar:." BingTest $(keyword) $(precision)
