@@ -2,6 +2,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
@@ -41,7 +42,7 @@ public class BingTest {
 
 	public static HashMap<String, Integer> wordCount(String str) {
 		// split string, remove some punctations
-		String pattern = "([\\|.,()'])";
+		String pattern = "([\\|.,\"()'])";
 	    str = str.replaceAll(pattern, "");
 	    String[] splitString = (str.split("\\s+"));
 	    
@@ -176,13 +177,13 @@ public class BingTest {
     }
     
 	public static void main(String[] args) throws IOException {
-            if (args.length<2){
+            /*if (args.length<2){
                 System.out.println("Usage: make run keyword=<keyword> precision=<precision>");
                 System.exit(1);
-            }
+            }*/
             ArrayList<String> keywords = new ArrayList<String>();
-            keywords.add(args[0]);
-        /*
+            /*keywords.add(args[0]);*/
+        float targetPrecision = 0f;
         System.out.println("Please input query:");
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		String query = null;
@@ -193,9 +194,25 @@ public class BingTest {
 			System.out.println("IO error trying to read your Query!");
 			System.exit(1);
 		}
-        
-        
-        String jsonText = getResult(query);
+        keywords.add(query);
+        System.out.println("Please input precision:");
+		BufferedReader br2 = new BufferedReader(new InputStreamReader(System.in));
+		String precisionString = null;
+		try {
+			precisionString = br2.readLine();
+			
+		} catch (IOException ioe) {
+			System.out.println("IO error trying to read your precision!");
+			System.exit(1);
+		}
+                try {
+                targetPrecision = Float.parseFloat(precisionString);
+            } catch (NumberFormatException e){
+                System.err.println(e.getMessage());
+                System.exit(1);
+            }
+                
+        /*String jsonText = getResult(query);
         ArrayList<ArrayList<String>> result = parseJSON(jsonText);
         
         Iterator<ArrayList<String>> iter = result.iterator();
@@ -212,16 +229,24 @@ public class BingTest {
         
         */
             
-            Float targetPrecision = 0.9f;
+            /*Float targetPrecision = 0.9f;
             try {
                 targetPrecision = Float.parseFloat(args[1]);
             } catch (NumberFormatException e){
                 System.err.println(e.getMessage());
                 System.exit(1);
-            }
+            }*/
+            
+            
+            
             Float precision = 0f;
             while (precision < targetPrecision) {
                 String key = keyToString(keywords);
+                System.out.println("=================================");
+key = java.net.URLEncoder.encode(key, "utf8");
+                System.out.println("Keywords: "+key);
+                System.out.println("=================================");
+                
                 
                 String content = getResult(key);
                 ArrayList<ArrayList<String>> result = parseJSON(content);
@@ -232,7 +257,7 @@ public class BingTest {
                 } else {
                     precision = y/10f;
                 }
-                //AddNewKeyword(result, keywords);
+                AddNewKeyword(result, keywords);
             }
             System.out.println("Target precision reached, exit.");
 
@@ -270,6 +295,8 @@ public class BingTest {
             keywords.add(firstKey);
             keywords.add(secondKey);
 
+            
+            System.out.println(globalWeights.toString());
             //add new keys to keywords
         }
         
@@ -306,8 +333,9 @@ public class BingTest {
         
         public static String keyToString(ArrayList<String> keywords){
             StringBuilder key = new StringBuilder();
-            for (int i = 0; i < keywords.size(); i++){
-                key.append(keywords.get(i));
+            key.append(keywords.get(0));
+            for (int i = 1; i < keywords.size(); i++){
+                key.append(" "+keywords.get(i));
             }
             return key.toString();
         }
